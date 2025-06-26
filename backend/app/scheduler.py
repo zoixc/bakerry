@@ -37,6 +37,18 @@ def load_all_configs() -> list[VPSConfig]:
         data = json.load(f)
     return [VPSConfig(**d) for d in data]
 
+def remove_backup_job(name: str):
+    # Удаление задания из планировщика
+    try:
+        scheduler.remove_job(job_id=name)
+    except Exception as e:
+        print(f"[Scheduler] Could not remove job {name}: {e}")
+
+    # Удаление конфигурации
+    configs = load_all_configs()
+    configs = [c for c in configs if c.name != name]
+    with open(CONFIG_FILE, "w") as f:
+        json.dump([c.dict() for c in configs], f, indent=2)
 
 # Автоматически загружаем все конфиги и запускаем джобы при старте
 for cfg in load_all_configs():
