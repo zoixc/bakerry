@@ -37,3 +37,13 @@ def schedule_backup(config: VPSConfig):
 @app.get("/status")
 def get_status():
     return BackupStatus.load_all()
+
+@app.delete("/schedule/{name}")
+def delete_schedule(name: str):
+    try:
+        from .scheduler import remove_backup_job
+        remove_backup_job(name)
+        return {"message": f"Schedule for '{name}' removed"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
