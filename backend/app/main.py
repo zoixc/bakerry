@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-import os
+from pathlib import Path
 
 from app.scheduler import scheduler, add_backup_job, remove_backup_job
 from app.backup import perform_backup
@@ -10,6 +10,7 @@ from app.models import VPSConfig, BackupStatus
 
 app = FastAPI()
 
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,16 +19,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Static files
+STATIC_DIR = Path(__file__).parent / "static"
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+# Serve frontend (index.html) for / and any path
 @app.get("/")
 def serve_frontend():
-    return FileResponse(os.path.join("static", "index.html"))
+    return FileResponse(STATIC_DIR / "index.html")
 
 @app.get("/{full_path:path}")
 def serve_routes(full_path: str):
-    return FileResponse(os.path.join("static", "index.html"))
+    return FileResponse(STATIC_DIR / "index.html")
 
+# Scheduler
 @app.on_event("startup")
 def start_scheduler():
     scheduler.start()
