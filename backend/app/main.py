@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from .scheduler import scheduler, add_backup_job
 from .backup import perform_backup
 from .models import VPSConfig, BackupStatus
@@ -14,6 +16,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/")
+def serve_frontend():
+    return FileResponse("static/index.html")
+
+@app.get("/{full_path:path}")
+def serve_vue_routes(full_path: str):
+    return FileResponse("static/index.html")
 
 @app.on_event("startup")
 def start_scheduler():
@@ -37,13 +49,3 @@ def schedule_backup(config: VPSConfig):
 @app.get("/status")
 def get_status():
     return BackupStatus.load_all()
-
-@app.delete("/schedule/{name}")
-def delete_schedule(name: str):
-    try:
-        from .scheduler import remove_backup_job
-        remove_backup_job(name)
-        return {"message": f"Schedule for '{name}' removed"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
