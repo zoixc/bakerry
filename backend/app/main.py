@@ -4,13 +4,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
 
-from .scheduler import scheduler, add_backup_job, remove_backup_job
-from .backup import perform_backup
-from .models import VPSConfig, BackupStatus
+from app.scheduler import scheduler, add_backup_job, remove_backup_job
+from app.backup import perform_backup
+from app.models import VPSConfig, BackupStatus
 
 app = FastAPI()
 
-# Разрешаем CORS (для frontend, если будет отдельный)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,7 +18,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Монтируем статику (frontend UI)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
@@ -28,7 +26,6 @@ def serve_frontend():
 
 @app.get("/{full_path:path}")
 def serve_routes(full_path: str):
-    # Для поддержки маршрутизации на frontend
     return FileResponse(os.path.join("static", "index.html"))
 
 @app.on_event("startup")
