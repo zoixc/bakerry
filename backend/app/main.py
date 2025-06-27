@@ -2,30 +2,34 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from .scheduler import scheduler, add_backup_job
+import os
+
+from .scheduler import scheduler, add_backup_job, remove_backup_job
 from .backup import perform_backup
 from .models import VPSConfig, BackupStatus
 
 app = FastAPI()
 
-origins = ["*"]
+# Разрешаем CORS (для frontend, если будет отдельный)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Монтируем статику (frontend UI)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 def serve_frontend():
-    return FileResponse("static/index.html")
+    return FileResponse(os.path.join("static", "index.html"))
 
 @app.get("/{full_path:path}")
-def serve_vue_routes(full_path: str):
-    return FileResponse("static/index.html")
+def serve_routes(full_path: str):
+    # Для поддержки маршрутизации на frontend
+    return FileResponse(os.path.join("static", "index.html"))
 
 @app.on_event("startup")
 def start_scheduler():
@@ -34,7 +38,8 @@ def start_scheduler():
 @app.post("/backup")
 def manual_backup(config: VPSConfig):
     try:
-        return perform_backup(config)
+        result = perform_backup(config)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -43,6 +48,14 @@ def schedule_backup(config: VPSConfig):
     try:
         add_backup_job(config)
         return {"message": "Backup scheduled"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/schedule/{name}")
+def delete_schedule(name: str):
+    try:
+        remove_backup_job(name)
+        return {"message": f"Schedule for '{name}' removed"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
